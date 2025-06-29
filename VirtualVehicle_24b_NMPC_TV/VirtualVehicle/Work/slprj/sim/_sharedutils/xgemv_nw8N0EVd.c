@@ -1,0 +1,29 @@
+#include "rtwtypes.h"
+#include "xgemv_nw8N0EVd.h"
+#include <emmintrin.h>
+#include "div_nde_s32_floor.h"
+
+void xgemv_nw8N0EVd(int32_T m, const real_T A[72000], const real_T x[246960],
+                    real_T y[686])
+{
+  __m128d tmp;
+  real_T c;
+  int32_T b;
+  int32_T b_iy;
+  int32_T ia;
+  for (b_iy = 0; b_iy <= 198; b_iy += 2) {
+    tmp = _mm_loadu_pd(&y[b_iy]);
+    _mm_storeu_pd(&y[b_iy], _mm_mul_pd(tmp, _mm_set1_pd(-1.0)));
+  }
+
+  for (b_iy = 0; b_iy <= 71640; b_iy += 360) {
+    c = 0.0;
+    b = b_iy + m;
+    for (ia = b_iy + 1; ia <= b; ia++) {
+      c += x[(ia - b_iy) + 685] * A[ia - 1];
+    }
+
+    ia = div_nde_s32_floor(b_iy, 360);
+    y[ia] += c;
+  }
+}

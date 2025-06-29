@@ -1,0 +1,8 @@
+-IC:/Users/user/MATLAB/Projects/examples/VirtualVehicle_24b/VirtualVehicle/Work
+-IC:/Users/user/MATLAB/Projects/examples/VirtualVehicle_24b/VirtualVehicle/Work/slprj/sim/NoDifferentialControl
+-I"C:/Program Files/MATLAB/R2024b/extern/include"
+-I"C:/Program Files/MATLAB/R2024b/simulink/include"
+-I"C:/Program Files/MATLAB/R2024b/rtw/c/src"
+-I"C:/Program Files/MATLAB/R2024b/rtw/c/src/ext_mode/common"
+-I"C:/Program Files/MATLAB/R2024b/rtw/c/ert"
+-IC:/Users/user/MATLAB/Projects/examples/VirtualVehicle_24b/VirtualVehicle/Work/slprj/sim/_sharedutils

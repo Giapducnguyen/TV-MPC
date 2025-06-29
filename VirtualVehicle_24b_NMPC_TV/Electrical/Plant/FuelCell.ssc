@@ -1,0 +1,356 @@
+component (Propagation = blocks) FuelCell
+% Fuel Cell
+% This block models a stack of membrane electrode assemblies (MEA) for a
+% proton exchange membrane (PEM) fuel cell. Hydrogen and oxygen are
+% consumed from the connected anode and cathode flow channels,
+% respectively. Water vapor is produced at the cathode flow channel. The
+% block also models water transport between the anode and cathode. Waste
+% heat is dissipated to the connected thermal mass.
+
+% Copyright 2020-2021 The MathWorks, Inc.
+
+nodes
+    % Electrodes
+    n = foundation.electrical.electrical; % -
+    p = foundation.electrical.electrical; % +
+    % Moist air ports to obtain domain parameters and property tables for
+    % the anode network and the cathode network only. There is no flow through ports A and C
+    A = foundation.moist_air.moist_air; % A
+    C = foundation.moist_air.moist_air; % C
+    % Source ports to add and remove mass from the anode and cathode gas channels
+    % for the reaction in the fuel cell
+    SA = foundation.moist_air.moist_air_source; % SA
+    SC = foundation.moist_air.moist_air_source; % SC
+end
+
+inputs
+    % Input ports for the internal states of the anode and cathode gas channels
+    % Inflow states
+    FAi = [101325; 293.15; 0.5; 0.01; 0.01; 0.01; 0.001; 0.001]; % FAi
+    FCi = [101325; 293.15; 0.5; 0.01; 0.01; 0.01; 0.001; 0.001]; % FCi
+    % Outflow states
+    FAo = [101325; 293.15; 0.5; 0.01; 0.01; 0.01; 0.001; 0.001]; % FAo
+    FCo = [101325; 293.15; 0.5; 0.01; 0.01; 0.01; 0.001; 0.001]; % FCo
+end
+
+nodes
+    % Thermal port for heat generation
+    H = foundation.thermal.thermal; % H
+end
+
+annotations
+    [n, p]            : Side = top;
+    [A, FAi, FAo, SA] : Side = left;
+    [C, FCi, FCo, SC] : Side = right;
+    H                 : Side = bottom;
+end
+
+parameters
+    N_cell       = {400,   '1'     }; % Number of cells in stack
+    area_cell    = {280,   'cm^2'  }; % Cell area
+    t_membrane   = {125,   'um'    }; % Membrane thickness
+    t_gdl_A      = {250,   'um'    }; % Anode gas diffusion layer (GDL) thickness
+    t_gdl_C      = {250,   'um'    }; % Cathode gas diffusion layer (GDL) thickness
+    io           = {8e-05, 'A/cm^2'}; % Exchange current density
+    iL           = {1.4,   'A/cm^2'}; % Max (limiting) current density
+    alpha        = {0.5,   '1'     }; % Charge transfer coefficient
+    D_H2O_gdl_A  = {0.07,  'cm^2/s'}; % Water vapor diffusivity in anode GDL
+    D_H2O_gdl_C  = {0.07,  'cm^2/s'}; % Water vapor diffusivity in cathode GDL
+    rho_membrane = {2000,  'kg/m^3'}; % Density of dry membrane
+    M_membrane   = {1.1,   'kg/mol'}; % Equivalent weight of dry membrane
+end
+
+% Parameter checks
+equations
+    assert(N_cell > 0)
+    assert(area_cell > 0)
+    assert(t_membrane > 0)
+    assert(t_gdl_A > 0)
+    assert(t_gdl_C > 0)
+    assert(io > 0)
+    assert(iL > io)
+    assert(alpha > 0)
+    assert(D_H2O_gdl_A > 0)
+    assert(D_H2O_gdl_C > 0)
+    assert(rho_membrane > 0)
+    assert(M_membrane > 0)
+end
+
+% Internal parameters
+parameters (Access = protected)
+    % Constants
+    R_u    = {8.31446261815324, 'J/K/mol'}; % Universal gas constant
+    F      = {96485.33212,      'C/mol'  }; % Faraday constant
+    G_H2O  = {-237.14,          'kJ/mol' }; % Gibbs free energy of water
+    HHV_H2 = {285.8,            'kJ/mol' }; % Higher heating value of hydrogen
+    LHV_H2 = HHV_H2 - MW_H2O * hfg_H2O_std; % Lower heating value of hydrogen
+    T_std  = {25,               'degC'   }; % Standard temperature
+    p_std  = {1,                'atm'    }; % Standard pressure
+
+    % Standard cell potential
+    E_cell = G_H2O/(-2*F);
+
+    % Membrane permeability to water
+    K_darcy = {1.58e-14, 'cm^2'};
+
+    % Compute molar masses from specific gas constants
+    MW_H2O = R_u/C.R_w;
+    MW_O2  = R_u/C.R_g;
+    MW_H2  = R_u/A.R_g;
+
+    % Species specific enthalpy at standard temperature
+    h_H2_std    = tablelookup(A.T_TLU, A.h_g_TLU,     T_std, interpolation = linear, extrapolation = linear);
+    h_O2_std    = tablelookup(C.T_TLU, C.h_g_TLU,     T_std, interpolation = linear, extrapolation = linear);
+    h_H2O_std   = tablelookup(C.T_TLU, C.h_w_TLU,     T_std, interpolation = linear, extrapolation = linear);
+    hfg_H2O_std = tablelookup(C.T_TLU, C.h_w_vap_TLU, T_std, interpolation = linear, extrapolation = linear);
+end
+
+variables (ExternalAccess = observe)
+    i = {0, 'A' }; % Current (positive in)
+    Q = {0, 'kW'}; % Heat flow rate (positive in)
+
+    a_H2O_acl = {0.5, '1'}; % Water vapor activity at anode catalyst layer (ACL)
+    a_H2O_ccl = {0.5, '1'}; % Water vapor activity at cathode catalyst layer (CCL)
+end
+
+branches
+    i : p.i -> n.i;
+    Q : H.Q -> *;
+end
+
+% For logging
+intermediates
+    v = p.v - n.v; % Voltage
+
+    i_cell = if le(i, 0), -i/area_cell else 0 end; % Cell current density
+    v_cell = v_nernst - v_act - v_ohm - v_conc; % Cell voltage
+    R_ohm = t_membrane / sigma; % Membrane resistance
+
+    power_elec = N_cell * v_cell * i_cell * area_cell; % Electrical power produced
+    power_dissipated = power_net - power_elec; % Power dissipated
+    efficiency_HHV = simscape.function.limit(v_cell / (HHV_H2/(2*F)), 0, 1, false); % Thermal efficiency based on HHV
+    efficiency_LHV = simscape.function.limit(v_cell / (LHV_H2/(2*F)), 0, 1, false); % Thermal efficiency based on LHV
+
+    H2_consumed  = N_cell * MW_H2  * area_cell * i_cell/(2*F); % Hydrogen consumed
+    O2_consumed  = N_cell * MW_O2  * area_cell * i_cell/(4*F); % Oxygen consumed
+    H2O_produced = N_cell * MW_H2O * area_cell * i_cell/(2*F); % Water produced
+
+    H2O_transport = (nflux_H2O_diff + nflux_H2O_drag + nflux_H2O_hydraulic) ...
+        * MW_H2O * area_cell * N_cell; % Net water transport from anode to cathode
+end
+
+annotations
+    [v, v_cell]                                             : LoggingUnit = 'V';
+    i_cell                                                  : LoggingUnit = 'A/cm^2';
+    R_ohm                                                   : LoggingUnit = 'Ohm*cm^2';
+    [power_elec, power_dissipated]                          : LoggingUnit = 'kW';
+    [efficiency_HHV, efficiency_LHV]                        : LoggingUnit = '1';
+    [H2_consumed, O2_consumed, H2O_produced, H2O_transport] : LoggingUnit = 'g/s';
+end
+
+intermediates (ExternalAccess = none)
+    % Extract anode gas states from input FAi
+    % Note: Can also connect Measurement Selector (MA) block to choose values
+    p_Ai     = {FAi(1), 'Pa'}; % Pressure
+    y_H2O_Ai = FAi(5);         % Water vapor mole fraction
+    y_H2_Ai  = FAi(8);         % Hydrogen mole fraction
+
+    % Extract anode gas states from input FAo
+    % Note: Can also connect Measurement Selector (MA) block to choose values
+    p_Ao     = {FAo(1), 'Pa'}; % Pressure
+    y_H2O_Ao = FAo(5);         % Water vapor mole fraction
+    y_H2_Ao  = FAo(8);         % Hydrogen mole fraction
+
+    % Extract cathode gas states from input FCi
+    % Note: Can also connect Measurement Select (MA) block to choose values
+    p_Ci     = {FCi(1), 'Pa'}; % Pressure
+    y_H2O_Ci = FCi(5);         % Water vapor mole fraction
+    y_O2_Ci  = FCi(8);         % Oxygen mole fraction
+
+    % Extract cathode gas states from input FCo
+    % Note: Can also connect Measurement Select (MA) block to choose values
+    p_Co     = {FCo(1), 'Pa'}; % Pressure
+    y_H2O_Co = FCo(5);         % Water vapor mole fraction
+    y_O2_Co  = FCo(8);         % Oxygen mole fraction
+
+    % Stack temperature
+    T_stack = H.T;
+
+    % Anode and cathode pressure
+    p_A = (p_Ai + p_Ao)/2;
+    p_C = (p_Ci + p_Co)/2;
+
+    % Ratio of pressure to water vapor saturation pressure
+    p_ws_ratio_A = exp(log(value(p_A, 'Pa')) - tablelookup(A.T_TLU, A.log_p_ws_TLU, T_stack, interpolation = linear, extrapolation = linear));
+    p_ws_ratio_C = exp(log(value(p_C, 'Pa')) - tablelookup(C.T_TLU, C.log_p_ws_TLU, T_stack, interpolation = linear, extrapolation = linear));
+
+    % Mole fractions at anode and cathode
+    y_H2_A = (y_H2_Ai + y_H2_Ao)/2;
+    y_O2_C = (y_O2_Ci + y_O2_Co)/2;
+    y_H2O_C = (y_H2O_Ci + y_H2O_Co)/2;
+
+    % Activities
+    a_H2_A_  = y_H2_A * p_A / p_std;
+    a_O2_C_  = y_O2_C * p_C / p_std;
+    a_H2O_C_ = y_H2O_C * p_ws_ratio_C;
+    a_H2_A   = if ge(a_H2_A_,  1e-9), a_H2_A_  else 1e-6 end;
+    a_O2_C   = if ge(a_O2_C_,  1e-9), a_O2_C_  else 1e-6 end;
+    a_H2O_C  = if ge(a_H2O_C_, 1e-9), a_H2O_C_ else 1e-6 end;
+
+    % Nernst voltage
+    v_nernst = E_cell + R_u*T_stack/(2*F) * log((a_H2_A * a_O2_C^0.5) / a_H2O_C);
+
+    % Activation losses from Tafel equation
+    b = R_u * T_stack / (2 * alpha * F);
+    v_act = if ge(i_cell, io), b*log(i_cell/io) else 0 end;
+
+    % Gas transport voltage loss
+    v_conc = -R_u*T_stack/(2*F) * ...
+        if le(i_cell, 0.999*iL), ...
+            log(1 - i_cell/iL) ...
+        else ...
+            log(1 - 0.999) - (i_cell/iL - 0.999)/(1 - 0.999) ...
+        end;
+
+    % Water content
+    lambda_acl = membrane_water(a_H2O_acl);
+    lambda_ccl = membrane_water(a_H2O_ccl);
+    lambda_membrane = (lambda_acl + lambda_ccl)/2;
+
+    % Membrane conductivity
+    sigma_30 = {if ge(lambda_membrane, 1), 0.005139*lambda_membrane - 0.00326 else 0.005139 - 0.00326 end, '1/(Ohm*cm)'};
+    sigma = sigma_30 * exp(1268*(1/303.15 - 1/value(T_stack, 'K')));
+
+    % Resistive voltage loss
+    v_ohm = R_ohm * i_cell;
+
+    % Water diffusion coefficient across membrane
+    D_H2O_membrane = {1.25e-10, 'm^2/s'} * exp(2416*(1/303.15 - 1/value(T_stack, 'K')));
+
+    % Water concentrations at anode and cathode catalyst layers
+    Conc_H2O_acl = rho_membrane / M_membrane * lambda_acl;
+    Conc_H2O_ccl = rho_membrane / M_membrane * lambda_ccl;
+
+    % Molar flux of water across membrane due to diffusion
+    nflux_H2O_diff = D_H2O_membrane*(Conc_H2O_acl - Conc_H2O_ccl)/t_membrane;
+
+    % Water electro-osmotic drag coefficient
+    nd_H2O_membrane = ...
+        if ge(lambda_acl, 0), ...
+            0.0029*lambda_acl^2 + 0.05*lambda_acl ...
+        else ...
+            0.05*lambda_acl ...
+        end;
+
+    % Molar flux of water across membrane due to electro-osmotic drag
+    nflux_H2O_drag = nd_H2O_membrane * i_cell / F;
+
+    % Water vapor mole fraction at anode and cathode catalyst layers
+    y_H2O_acl = a_H2O_acl/p_ws_ratio_A;
+    y_H2O_ccl = a_H2O_ccl/p_ws_ratio_C
+
+    % Molar flux of water across anode and cathode diffusion layers
+    nflux_H2O_A = p_A*D_H2O_gdl_A/(R_u*T_stack) * (y_H2O_Ao - y_H2O_acl)/t_gdl_A;
+    nflux_H2O_C = p_C*D_H2O_gdl_C/(R_u*T_stack) * (y_H2O_ccl - y_H2O_Co)/t_gdl_C;
+
+    % Molar flux of water across membrane due to hydraulic pressure difference based on Darcy's law
+    mu_H2O = tablelookup(A.T_TLU, A.mu_w_TLU, T_stack, interpolation = linear, extrapolation = nearest);
+    nflux_H2O_hydraulic = ...
+        if gt(p_A, p_C), ...
+            (p_A - p_C) * K_darcy * p_A * y_H2O_acl / (R_u * T_stack * mu_H2O * t_membrane) ...
+        else...
+            (p_A - p_C) * K_darcy * p_C * y_H2O_ccl / (R_u * T_stack * mu_H2O * t_membrane) ...
+        end
+
+    % Energy generation due to reaction at standard temperature
+    power_rxn = LHV_H2 * H2_consumed / MW_H2;
+
+    % Energy gain in membrane due to bringing reactants and products to standard temperature
+    power_delta_std = (source_H2_A.Phi_S - source_H2_A.mdot_g_S*h_H2_std) ...
+        + (source_O2_C.Phi_S - source_O2_C.mdot_g_S*h_O2_std) ...
+        + (source_H2O_C.Phi_S - source_H2O_C.mdot_w_S*h_H2O_std);
+
+    % Energy gain in membrane due to water transport
+    power_trans = transport_H2O_A.Phi_S + transport_H2O_C.Phi_S;
+
+    % Net energy gain in stack
+    power_net = power_rxn + power_delta_std + power_trans;
+end
+
+equations
+    % Stack voltage
+    v == N_cell * v_cell;
+
+    % Heat generated
+    -Q == power_dissipated;
+
+    % Equate water vapor mass flow rates at GDL and membrane
+    % to solve for water vapor activity at ACL and CCL
+    nflux_H2O_A * MW_H2O * area_cell * N_cell == H2O_transport;
+    nflux_H2O_C * MW_H2O * area_cell * N_cell == H2O_transport + H2O_produced;
+
+    % Assign mass flow rate to the internal moisture source blocks
+    % to model transport of water across membrane
+    transport_H2O_A.M == -H2O_transport;
+    transport_H2O_C.M == H2O_transport;
+    transport_H2O_A.T == T_stack;
+    transport_H2O_C.T == T_stack;
+
+    % Assign mass flow rate to the internal moisture source and trace gas source blocks
+    % to model mass consumption/generation due to reaction
+    source_H2_A.M  == -H2_consumed;
+    source_O2_C.M  == -O2_consumed;
+    source_H2O_C.M == H2O_produced;
+    source_H2_A.T  == T_stack;
+    source_O2_C.T  == T_stack;
+    source_H2O_C.T == T_stack;
+end
+
+% Internal components to add or remove mass at the anode and cathode
+components (ExternalAccess = none)
+    % Moisture source blocks for water transport
+    transport_H2O_A = foundation.moist_air.sources.moisture_trace_gas.moisture_source( ...
+        moisture_source_spec = foundation.enum.moisture_source_spec.vapor,...
+        source_type = foundation.enum.constant_controlled.controlled);
+    transport_H2O_C = foundation.moist_air.sources.moisture_trace_gas.moisture_source( ...
+        moisture_source_spec = foundation.enum.moisture_source_spec.vapor,...
+        source_type = foundation.enum.constant_controlled.controlled);
+
+    % Moisture source and trace gas source blocks for reaction
+    source_H2_A = foundation.moist_air.sources.moisture_trace_gas.trace_gas_source( ...
+        source_type = foundation.enum.constant_controlled.controlled);
+    source_O2_C = foundation.moist_air.sources.moisture_trace_gas.trace_gas_source( ...
+        source_type = foundation.enum.constant_controlled.controlled);
+    source_H2O_C = foundation.moist_air.sources.moisture_trace_gas.moisture_source( ...
+        moisture_source_spec = foundation.enum.moisture_source_spec.vapor,...
+        source_type = foundation.enum.constant_controlled.controlled);
+end
+
+connections
+    connect(SA, transport_H2O_A.S, source_H2_A.S)
+    connect(SC, transport_H2O_C.S, source_O2_C.S, source_H2O_C.S)
+end
+
+end
+
+
+
+function lambda = membrane_water(a)
+% Compute the water content of the membrane as a function of the water
+% activity. This function is based on fits to FEA simulations.
+%
+% See: Dutta, et.al., Numerical prediction of mass-exchange between
+% cathode and anode channels in a PEM fuel cell. (Equation 16)
+
+definitions
+    lambda = ...
+        if lt(a, 0), ...
+            0.043 + 17.81*a ...
+        elseif le(a, 1), ...
+            0.043 + 17.81*a - 39.85*a^2 + 36*a^3 ...
+        else ...
+            14.003 + 1.4*(a - 1) ...
+        end;
+end
+
+end

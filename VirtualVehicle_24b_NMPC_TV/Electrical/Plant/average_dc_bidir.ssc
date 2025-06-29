@@ -1,0 +1,65 @@
+component average_dc_bidir
+    % Average-Value DC-DC Bi-Directional Converter :2.0
+    % This block represents a controlled bi-direcitonal average-value DC-DC
+    % converter. Use voltage reference as control input to convert the 
+    % electrical energy between the two sides.
+    
+    % Copyright 2018-2024 The MathWorks, Inc.
+    
+    parameters
+        efficiency_fixed = {100,'1'};  % Efficiency (%)
+    end
+    
+    inputs
+        Vref = {1, 'V'}; % Vref:left
+    end
+    
+    nodes
+        p1 = foundation.electrical.electrical;     % 1+:left
+        n1 = foundation.electrical.electrical;     % 1-:left
+        p2 = foundation.electrical.electrical;     % 2+:right
+        n2 = foundation.electrical.electrical;     % 2-:right
+    end
+    
+    variables (Access=protected)
+        i1 = { 0, 'A' }; % Input current
+        i2 = { 0, 'A' }; % Output current
+        v1 = { 0, 'V' }; % Input voltage
+        v2 = { 0, 'V' }; % Output voltage
+    end
+
+    branches
+        i1 : p1.i -> n1.i;
+        i2 : p2.i -> n2.i;
+    end
+    
+    equations 
+        v1 == p1.v-n1.v;
+        v2 == p2.v-n2.v;
+        assert(v1>=0);
+        assert(efficiency_fixed>0);
+        assert(efficiency_fixed<=100);
+    end	
+        
+    connections
+        connect(n1,n2);
+    end
+    
+    intermediates
+        efficiency = efficiency_fixed/100; 
+    end
+    
+    equations
+        let
+            ref = if Vref <= 0, 0 else Vref end;
+        in
+            assert(Vref>=0,'Vref is not in an acceptable range. Setting to 0.',Warn=true);
+                if i1 >= 0
+                    -i1*v1 * efficiency == i2*v2;
+                else
+                    -i1*v1 == i2*v2 * efficiency;
+                end
+                v2 == ref;
+            end
+        end
+end

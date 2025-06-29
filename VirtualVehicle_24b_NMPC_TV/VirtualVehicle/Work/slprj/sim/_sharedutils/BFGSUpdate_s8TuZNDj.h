@@ -1,0 +1,9 @@
+#ifndef BFGSUpdate_s8TuZNDj_h_
+#define BFGSUpdate_s8TuZNDj_h_
+#include "rtwtypes.h"
+#include "multiword_types.h"
+
+extern boolean_T BFGSUpdate_s8TuZNDj(int32_T nvar, real_T Bk[6889], const real_T
+  sk[486], real_T yk[486], real_T workspace[439830]);
+
+#endif

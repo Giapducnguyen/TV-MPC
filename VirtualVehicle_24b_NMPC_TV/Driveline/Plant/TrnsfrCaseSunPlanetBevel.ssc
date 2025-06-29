@@ -1,0 +1,174 @@
+component TrnsfrCaseSunPlanetBevel
+% Sun-Planet Bevel : 1.4
+% Represents a planetary mechanism of two degrees of freedom consisting of 
+% a carrier with bevel planetary gears meshing with a bevel sun gear. The
+% block is primarily intended to be used as a building block for a variety
+% of planetary trains with bevel gears. No inertia or compliance is
+% modeled in this block. You can optionally include gear meshing and
+% viscous bearing losses. Meshing losses are parameterized in terms of the
+% ordinary efficiency; that is, the efficiency of the path between the planet
+% and the sun gear links with the carrier fixed.
+%
+% Connections C, P, and S are mechanical rotational conserving ports
+% associated with the carrier, planet, and sun shafts, respectively.
+% Optionally include thermal effects and expose thermal conserving port H
+% by setting Friction model to a temperature-dependent setting.
+
+% Copyright 2005-2020 The MathWorks, Inc.
+inputs
+    ratio2 = { 2, '1' }; % E:left
+end
+nodes
+    C = foundation.mechanical.rotational.rotational; % C:left
+    P = foundation.mechanical.rotational.rotational; % P:right
+    S = foundation.mechanical.rotational.rotational; % S:right
+end
+
+nodes(ExternalAccess=none)
+    H = foundation.thermal.thermal;                   % H:left
+end
+
+parameters
+    ratio = {2, '1'};               % Planet (P) to sun (S) teeth ratio (NP/NS)
+    assembly_orientation = sdl.enum.sun_planet_bevel_orientation.left;  % Assembly orientation
+    friction_model = sdl.enum.gear_friction.none;   % Friction model
+    mu_visc = {0, 'N*m/(rad/s)'};   % Sun-carrier viscous friction coefficient
+end
+
+parameters(ExternalAccess=none)
+    efficiency = {0.9, '1'};        % Ordinary efficiency
+    temperature_TLU = {[280, 300, 320],'K' };   % Temperature
+    efficiency_TLU = {[.95, .90, .85],'1' };    % Efficiency
+    pwr_thr = { 0.001, 'W' };       % Sun-carrier power threshold
+    thermal_mass = { 50, 'J/K' };               % Thermal mass
+end
+
+parameters(Access=private)
+%     R = ratio * (3-2*assembly_orientation); % Signed gear ratio
+%     R = ratio * (3-2*assembly_orientation); % Signed gear ratio
+
+end
+intermediates
+    R = ratio2 * (3-2*assembly_orientation); % Signed gear ratio
+end
+
+variables(Access = protected)
+    t_P = { 0, 'N*m' }; % Planet torque
+    t_C = { 0, 'N*m' }; % Carrier torque
+    t_S = { 0, 'N*m' }; % Sun torque
+end
+
+variables(Conversion = absolute, ExternalAccess=none)
+    temperature = { value = { 300, 'K' }, priority = priority.high };   % Temperature
+end
+
+branches
+    t_P : P.t -> *;
+    t_C : C.t -> *;
+    t_S : S.t -> *;
+end
+
+if friction_model == 1 || friction_model == 2
+    components(ExternalAccess=observe)
+        damper = foundation.mechanical.rotational.damper(D=mu_visc);
+    end
+    connections
+        connect(H,*);
+    end
+    equations
+        temperature == {300, 'K'};
+    end
+else
+    components(ExternalAccess=observe)
+        damper = sdl.couplings.springs.rot_damper_th(D=mu_visc);
+    end
+    connections
+        connect(damper.H,H);
+    end
+end
+
+connections
+    connect(damper.R,S);
+    connect(damper.C,C);
+end
+
+equations
+    assert(ratio>0)
+    assert(mu_visc>=0)
+    P.w*R == S.w - C.w;
+    t_S == -t_P/R+ Trq;
+    t_C == t_P/R - Trq;
+end
+
+if friction_model == 1  % No friction losses
+    parameters
+        Trq = { 0, 'N*m' };
+    end
+else
+    annotations
+        pwr_thr : ExternalAccess=modify;
+    end
+    equations
+        assert(pwr_thr>0)
+    end
+    intermediates(ExternalAccess=none)
+        w_rel = S.w - C.w
+        power = t_S*w_rel;
+        Trq = t_S/(2*eff)*((1-eff^2)*tanh(4*power/pwr_thr)+2*eff-eff^2-1);
+    end
+    if friction_model == 2
+        annotations
+            efficiency : ExternalAccess=modify;
+        end
+        parameters
+           eff = efficiency; 
+        end
+        equations
+            assert(efficiency<=1)
+            assert(efficiency>0)
+        end
+    else
+        annotations
+            [H,...
+             temperature,...
+             temperature_TLU,...
+             efficiency_TLU,...
+             thermal_mass] : ExternalAccess = modify;
+        end
+        variables
+            heat_flow = { 0, 'W' };             % External heat flow into port H
+        end
+        branches
+            heat_flow : H.Q -> *;
+        end
+        intermediates(ExternalAccess=none)
+            eff = tablelookup(temperature_TLU, efficiency_TLU, temperature, interpolation = linear, extrapolation = nearest);
+        end
+        intermediates
+            power_dissipated = Trq * w_rel;
+        end
+        equations
+            assert(all(diff(temperature_TLU)>0))
+            assert(all(temperature_TLU>0))
+            assert(length(temperature_TLU)>=2)
+            assert(length(efficiency_TLU)==length(temperature_TLU))
+            assert(all(efficiency_TLU<=1))
+            assert(all(efficiency_TLU>0))
+            assert(thermal_mass>0)
+            temperature.der * thermal_mass == power_dissipated + heat_flow;
+            temperature == H.T;
+        end
+    end
+end
+
+annotations
+    UILayout = [UIGroup('physmod:simscape:library:gui:groups:Main', ...
+                        ratio, assembly_orientation)
+                UIGroup('physmod:sdl:library:tabs:MeshingLosses', ...
+                        friction_model, efficiency, temperature_TLU, efficiency_TLU, pwr_thr)
+                UIGroup('physmod:sdl:library:tabs:ViscousLosses', ...
+                        mu_visc)
+                UIGroup('physmod:simscape:library:tabs:ThermalPort', ...
+                        thermal_mass)]
+end
+end 

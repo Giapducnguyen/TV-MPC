@@ -1,0 +1,8 @@
+#ifndef checkVectorNonFinite_3YIRPDKt_h_
+#define checkVectorNonFinite_3YIRPDKt_h_
+#include "rtwtypes.h"
+#include "multiword_types.h"
+
+extern int32_T checkVectorNonFinite_3YIRPDKt(const real_T vec[30]);
+
+#endif

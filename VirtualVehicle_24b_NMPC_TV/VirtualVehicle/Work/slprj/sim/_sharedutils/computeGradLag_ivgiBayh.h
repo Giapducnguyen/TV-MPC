@@ -1,0 +1,11 @@
+#ifndef computeGradLag_ivgiBayh_h_
+#define computeGradLag_ivgiBayh_h_
+#include "rtwtypes.h"
+#include "multiword_types.h"
+
+extern void computeGradLag_ivgiBayh(real_T workspace[206], int32_T nVar, const
+  real_T grad[206], const real_T AineqTrans[19776], const real_T AeqTrans[4944],
+  const int32_T finiteFixed[206], int32_T mFixed, const int32_T finiteLB[206],
+  int32_T mLB, const int32_T finiteUB[206], int32_T mUB, const real_T lambda[387]);
+
+#endif

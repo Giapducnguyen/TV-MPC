@@ -1,0 +1,83 @@
+#include "rtwtypes.h"
+#include "TopKRows_uv9pY3S6.h"
+#include "percolateDown_QvXVG1WD.h"
+#include "sortLE_POl6Uh1z.h"
+
+void TopKRows_uv9pY3S6(const real_T X[531], real_T B[10], int32_T b_I[10])
+{
+  int32_T heap[10];
+  int32_T b_ii;
+  int32_T child;
+  int32_T firstChild;
+  int32_T i;
+  int32_T numToRemove;
+  int32_T tmp;
+  boolean_T newRowIsHigher;
+  boolean_T valuesSwapped;
+  for (i = 0; i < 10; i++) {
+    heap[i] = 10 - i;
+  }
+
+  for (numToRemove = 4; numToRemove >= 0; numToRemove--) {
+    percolateDown_QvXVG1WD(heap, numToRemove + 1, X);
+  }
+
+  for (numToRemove = 0; numToRemove < 521; numToRemove++) {
+    if (numToRemove + 11 < heap[0]) {
+      newRowIsHigher = sortLE_POl6Uh1z(X, numToRemove + 11, heap[0]);
+    } else {
+      newRowIsHigher = !sortLE_POl6Uh1z(X, heap[0], numToRemove + 11);
+    }
+
+    if (newRowIsHigher) {
+      heap[0] = numToRemove + 11;
+      percolateDown_QvXVG1WD(heap, 1, X);
+    }
+  }
+
+  numToRemove = 1;
+  for (b_ii = 9; b_ii >= 0; b_ii--) {
+    b_I[b_ii] = heap[0];
+    B[b_ii] = X[heap[0] - 1];
+    tmp = heap[b_ii];
+    heap[b_ii] = heap[0];
+    heap[0] = tmp;
+    tmp = 0;
+    valuesSwapped = false;
+    newRowIsHigher = true;
+    firstChild = 2;
+    while ((firstChild <= 10 - numToRemove) && (newRowIsHigher || valuesSwapped))
+    {
+      newRowIsHigher = false;
+      child = firstChild - 1;
+      if (firstChild + 1 <= 10 - numToRemove) {
+        i = heap[firstChild - 1];
+        if (i < heap[firstChild]) {
+          valuesSwapped = sortLE_POl6Uh1z(X, i, heap[firstChild]);
+        } else {
+          valuesSwapped = !sortLE_POl6Uh1z(X, heap[firstChild], i);
+        }
+
+        if (valuesSwapped) {
+          child = firstChild;
+        }
+      }
+
+      if (heap[tmp] < heap[child]) {
+        valuesSwapped = sortLE_POl6Uh1z(X, heap[tmp], heap[child]);
+      } else {
+        valuesSwapped = !sortLE_POl6Uh1z(X, heap[child], heap[tmp]);
+      }
+
+      if (valuesSwapped) {
+        firstChild = heap[tmp];
+        heap[tmp] = heap[child];
+        heap[child] = firstChild;
+        tmp = child;
+        firstChild = (child << 1) + 2;
+      }
+    }
+
+    numToRemove++;
+  }
+}

@@ -1,0 +1,151 @@
+%implements "chartSource" "C"
+%function ChartConfig(block, system) void
+  %createrecord chartConfiguration { ...
+          executeAtInitialization  0 ...
+  }
+  %return chartConfiguration
+%endfunction
+%function ChartDataMap(block, system) void
+  %createrecord ChartDataElements {\
+    NumChartData   19 \
+    ChartDataDefaults {\
+      RecordType   "ChartData"\
+      Dimensions   []\
+      IsTestPoint  0\
+    }\
+    ChartData {\
+      Name         "ChrgCntctState"\
+      Description  "ChartLocal"\
+      SFName       ""\
+      Path         "ChrgCntctState"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "InvtrCntctState"\
+      Description  "ChartLocal"\
+      SFName       ""\
+      Path         "InvtrCntctState"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "FaultPresent"\
+      Description  "ChartLocal"\
+      SFName       ""\
+      Path         "FaultPresent"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "Delta"\
+      Description  "ChartLocal"\
+      SFName       ""\
+      Path         "Delta"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "MonitorCurrLimMode"\
+      Description  "ChartLocal"\
+      SFName       ""\
+      Path         "MonitorCurrLimMode"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "MonitorCellVoltageMode"\
+      Description  "ChartLocal"\
+      SFName       ""\
+      Path         "MonitorCellVoltageMode"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "MonitorCellTempMode"\
+      Description  "ChartLocal"\
+      SFName       ""\
+      Path         "MonitorCellTempMode"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_active_c2_BMSStateMachine"\
+      Description  "StateIsActive"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_MainStateMachine"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "MainStateMachine"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_Charging"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "MainStateMachine.Charging"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_ChargerContactorState"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "ChargerContactorState"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_CloseChgrContactors"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "ChargerContactorState.CloseChgrContactors"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_OpenChgrContactors"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "ChargerContactorState.OpenChgrContactors"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_InverterContactorState"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "InverterContactorState"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_CloseInvtrContactors"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "InverterContactorState.CloseInvtrContactors"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "is_OpenInvtrContactors"\
+      Description  "StateActiveChild"\
+      SFName       ""\
+      Path         "InverterContactorState.OpenInvtrContactors"\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "temporalCounter_i1"\
+      Description  "TemporalCounter"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "temporalCounter_i2"\
+      Description  "TemporalCounter"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  ""\
+    }\
+    ChartData {\
+      Name         "temporalCounter_i3"\
+      Description  "TemporalCounter"\
+      SFName       ""\
+      Path         ""\
+      SrcLocation  ""\
+    }\
+  }
+  %return ChartDataElements
+%endfunction
