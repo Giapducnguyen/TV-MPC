@@ -2,7 +2,7 @@
 ## Makefile generated for component 'EvPowertrainController4EM'. 
 ## 
 ## Makefile     : EvPowertrainController4EM.mk
-## Generated on : Sun Jun 29 13:33:31 2025
+## Generated on : Sat Jul 05 15:36:41 2025
 ## Final product: ./EvPowertrainController4EMlib.lib
 ## Product type : static library
 ## 
@@ -183,7 +183,7 @@ DEFINES = $(DEFINES_BUILD_ARGS) $(DEFINES_CUSTOM) $(DEFINES_OPTS) $(DEFINES_STAN
 ## SOURCE FILES
 ###########################################################################
 
-SRCS = $(START_DIR)/slprj/sim/EvPowertrainController4EM/EvPowertrainController4EM.c $(START_DIR)/slprj/sim/EvPowertrainController4EM/EvPowertrainController4EM_capi.c
+SRCS = $(MATLAB_ROOT)/toolbox/eml/externalDependency/timefun/coder_posix_time.c $(START_DIR)/slprj/sim/EvPowertrainController4EM/EvPowertrainController4EM.c $(START_DIR)/slprj/sim/EvPowertrainController4EM/EvPowertrainController4EM_capi.c
 
 ALL_SRCS = $(SRCS)
 
@@ -191,7 +191,7 @@ ALL_SRCS = $(SRCS)
 ## OBJECTS
 ###########################################################################
 
-OBJS = EvPowertrainController4EM.obj EvPowertrainController4EM_capi.obj
+OBJS = coder_posix_time.obj EvPowertrainController4EM.obj EvPowertrainController4EM_capi.obj
 
 ALL_OBJS = $(OBJS)
 
@@ -526,6 +526,10 @@ $(PRODUCT) : $(OBJS) $(PREBUILT_OBJS)
 
 %.obj : $(MATLAB_ROOT)/toolbox/simulink/blocks/src/%.C
 	$(CPP) $(CPPFLAGS) -o "$@" "$<"
+
+
+coder_posix_time.obj : $(MATLAB_ROOT)/toolbox/eml/externalDependency/timefun/coder_posix_time.c
+	$(CC) $(CFLAGS) -o "$@" "$<"
 
 
 EvPowertrainController4EM.obj : $(START_DIR)/slprj/sim/EvPowertrainController4EM/EvPowertrainController4EM.c

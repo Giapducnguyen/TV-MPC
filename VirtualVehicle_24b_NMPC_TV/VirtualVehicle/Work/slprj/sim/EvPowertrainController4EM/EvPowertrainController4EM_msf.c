@@ -84,7 +84,7 @@ UnitId unitIdReg ; ssRegisterUnitFromExpr ( S , "" , & unitIdReg ) ; if ( unitId
 #endif
 } ssSetInputPortDirectFeedThrough ( S , 2 , 1 ) ;
 ssSetInputPortRequiredContiguous ( S , 2 , 1 ) ; ssSetInputPortOptimOpts ( S
-, 2 , SS_NOT_REUSABLE_AND_LOCAL ) ; ssSetInputPortOverWritable ( S , 2 ,
+, 2 , SS_NOT_REUSABLE_AND_GLOBAL ) ; ssSetInputPortOverWritable ( S , 2 ,
 false ) ; ssSetInputPortSampleTime ( S , 2 , 0.01 ) ;
 ssSetInputPortOffsetTime ( S , 2 , 0.0 ) ; if ( !
 ssSetInputPortVectorDimension ( S , 3 , 4 ) ) return ;
@@ -212,7 +212,7 @@ UnitId unitIdReg ; ssRegisterUnitFromExpr ( S , "" , & unitIdReg ) ; if ( unitId
 #endif
 } ssSetInputPortDirectFeedThrough ( S , 12 , 1 ) ;
 ssSetInputPortRequiredContiguous ( S , 12 , 1 ) ; ssSetInputPortOptimOpts ( S
-, 12 , SS_NOT_REUSABLE_AND_LOCAL ) ; ssSetInputPortOverWritable ( S , 12 ,
+, 12 , SS_NOT_REUSABLE_AND_GLOBAL ) ; ssSetInputPortOverWritable ( S , 12 ,
 false ) ; ssSetInputPortSampleTime ( S , 12 , 0.01 ) ;
 ssSetInputPortOffsetTime ( S , 12 , 0.0 ) ; if ( !
 ssSetInputPortVectorDimension ( S , 13 , 1 ) ) return ;

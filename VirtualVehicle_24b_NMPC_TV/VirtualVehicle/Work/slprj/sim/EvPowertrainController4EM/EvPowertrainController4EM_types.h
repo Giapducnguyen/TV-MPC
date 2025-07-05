@@ -1,6 +1,7 @@
 #ifndef EvPowertrainController4EM_types_h_
 #define EvPowertrainController4EM_types_h_
 #include "rtwtypes.h"
+#include "coder_posix_time.h"
 #ifndef struct_tag_sTF8CnSp4d9JDiugPTQgyXF
 #define struct_tag_sTF8CnSp4d9JDiugPTQgyXF
 struct tag_sTF8CnSp4d9JDiugPTQgyXF { real_T grad [ 121 ] ; real_T Hx [ 120 ]

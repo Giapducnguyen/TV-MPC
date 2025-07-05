@@ -1,4 +1,5 @@
 -IC:/Users/user/MATLAB/Projects/examples/VirtualVehicle_24b_NMPC_TV/VirtualVehicle/Work
+-I"C:/Program Files/MATLAB/R2024b/toolbox/eml/externalDependency/timefun"
 -IC:/Users/user/MATLAB/Projects/examples/VirtualVehicle_24b_NMPC_TV/VirtualVehicle/Work/slprj/sim/EvPowertrainController4EM
 -I"C:/Program Files/MATLAB/R2024b/extern/include"
 -I"C:/Program Files/MATLAB/R2024b/simulink/include"
