@@ -20,10 +20,10 @@ The detailed OCP formulation is provided in the accompanying PDF in this reposit
 
 ## Control Variants
 - **Nonlinear MPC**: Based on the full nonlinear vehicle dynamics model
-- **Linear Time-Varying (LTV) MPC**: A simplified linearized variant. While best implemented using a dedicated QP solver, it is also prototyped using `fmincon` for consistency. It shows significant reduction in computation time compared to the nonlinear MPC.
+- **Linear Time-Varying (LTV) MPC**: A simplified linearized variant. It shows significant reduction in computation time compared to the nonlinear MPC.
 
 ## How to Run
 1. Open the Simulink project: VirtualVehicle_24b_NMPC_TV/VirtualVehicle/VirtualVehicle.prj
 2. Open the main simulation model: VirtualVehicle_24b_NMPC_TV/VirtualVehicle/System/ConfiguredVirtualVehicle/ConfiguredVirtualVehicleModel.slx
-3. Select a driving scenario and choose the desired control variant.  
+3. Select a driving scenario and choose the desired torque vectoring control variant.  
 4. Run the simulation and tune key parameters (prediction/control horizons, objective weights, ...) to achieve desired performance.
